@@ -14,9 +14,11 @@
     } \
 }
 
+void basicSgemm_h(int m, int k, int n, const float *A_h, const float *B_h, float* C_h);
+
 bool isNumber(const char *string);
 void fillMatrix(float *matrix, size_t rowCount, size_t colCount);
-void printMatrix(float *matrix, size_t rowCount, size_t colCount);
+void printMatrix(const float *matrix, size_t rowCount, size_t colCount);
 double myCPUTimer();
 
 int main(int argc, char *argv[]) {
@@ -42,8 +44,14 @@ int main(int argc, char *argv[]) {
   fillMatrix(B, k, n);
   float *C = (float *) malloc(m * n * sizeof(float));
 
+  basicSgemm_h(m, k, n, A, B, C);
+
+  printf("A\n");
   printMatrix(A, m, k);
+  printf("B\n");
   printMatrix(B, k, n);
+  printf("C\n");
+  printMatrix(C, m, n);
 
   free(A);
   free(B);
@@ -69,10 +77,10 @@ void fillMatrix(float *matrix, size_t rowCount, size_t colCount) {
   }
 }
 
-void printMatrix(float *matrix, size_t rowCount, size_t colCount) {
+void printMatrix(const float *matrix, size_t rowCount, size_t colCount) {
   for (unsigned int i = 0; i < rowCount; i++) {
     for (unsigned int j = 0; j < colCount; j++) {
-      printf("%5.2f ", matrix[i * colCount + j]);
+      printf("%5.3f ", matrix[i * colCount + j]);
     }
     printf("\n");
   }
@@ -82,4 +90,16 @@ double myCPUTimer() {
     struct timeval tp;
     gettimeofday(&tp, NULL);
     return ((double)tp.tv_sec + (double)tp.tv_usec/1.0e6);
+}
+
+void basicSgemm_h(int m, int k, int n, const float *A_h, const float *B_h, float* C_h) {
+  for (unsigned int i = 0; i < m; i++) {
+    for (unsigned int j = 0; j < n; j++) {
+      float dotProduct = 0;
+      for (unsigned int element_idx = 0; element_idx < k; element_idx++) {
+        dotProduct += A_h[k * i + element_idx] * B_h[n * element_idx + j];
+      }
+      C_h[i * n + j] = dotProduct;
+    }
+  }
 }
