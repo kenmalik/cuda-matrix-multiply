@@ -15,6 +15,7 @@
 }
 
 void basicSgemm_h(int m, int k, int n, const float *A_h, const float *B_h, float* C_h);
+void matrixMulHost(int m, int k, int n, const float *A_h, const float *B_h, float* C_h);
 
 bool isNumber(const char *string);
 void fillMatrix(float *matrix, size_t rowCount, size_t colCount);
@@ -38,6 +39,9 @@ int main(int argc, char *argv[]) {
   int k = atoi(argv[2]);
   int n = atoi(argv[3]);
 
+  printf("Matrix Sizes:\n");
+  printf("A: %d x %d\nB: %d x %d\nC: %d x %d\n\n", m, k, k, n, m, n);
+
   float *A = (float *) malloc(m * k * sizeof(float));
   fillMatrix(A, m, k);
   float *B = (float *) malloc(k * n * sizeof(float));
@@ -46,12 +50,12 @@ int main(int argc, char *argv[]) {
 
   basicSgemm_h(m, k, n, A, B, C);
 
-  printf("A\n");
-  printMatrix(A, m, k);
-  printf("B\n");
-  printMatrix(B, k, n);
-  printf("C\n");
-  printMatrix(C, m, n);
+  /*printf("A\n");*/
+  /*printMatrix(A, m, k);*/
+  /*printf("B\n");*/
+  /*printMatrix(B, k, n);*/
+  /*printf("C\n");*/
+  /*printMatrix(C, m, n);*/
 
   free(A);
   free(B);
@@ -93,6 +97,13 @@ double myCPUTimer() {
 }
 
 void basicSgemm_h(int m, int k, int n, const float *A_h, const float *B_h, float* C_h) {
+  double startTime = myCPUTimer();
+  matrixMulHost(m, k, n, A_h, B_h, C_h);
+  double endTime = myCPUTimer();
+  printf("matrixMul on CPU: %f s\n", endTime - startTime);
+}
+
+void matrixMulHost(int m, int k, int n, const float *A_h, const float *B_h, float* C_h) {
   for (unsigned int i = 0; i < m; i++) {
     for (unsigned int j = 0; j < n; j++) {
       float dotProduct = 0;
