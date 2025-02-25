@@ -3,10 +3,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+
+#define CHECK(call) { \
+    const cudaError_t cuda_ret = call; \
+    if (cuda_ret != cudaSuccess) { \
+        printf("Error: %s: %d, ", __FILE__, __LINE__); \
+        printf("Code: %d, Reason: %s\n", cuda_ret, cudaGetErrorString(cuda_ret)); \
+        exit(-1); \
+    } \
+}
 
 bool isNumber(const char *string);
 void fillMatrix(float *matrix, size_t rowCount, size_t colCount);
 void printMatrix(float *matrix, size_t rowCount, size_t colCount);
+double myCPUTimer();
 
 int main(int argc, char *argv[]) {
   if (argc != 4) {
@@ -25,11 +36,11 @@ int main(int argc, char *argv[]) {
   int k = atoi(argv[2]);
   int n = atoi(argv[3]);
 
-  float *A = malloc(m * k * sizeof(float));
+  float *A = (float *) malloc(m * k * sizeof(float));
   fillMatrix(A, m, k);
-  float *B = malloc(k * n * sizeof(float));
+  float *B = (float *) malloc(k * n * sizeof(float));
   fillMatrix(B, k, n);
-  float *C = malloc(m * n * sizeof(float));
+  float *C = (float *) malloc(m * n * sizeof(float));
 
   printMatrix(A, m, k);
   printMatrix(B, k, n);
@@ -65,4 +76,10 @@ void printMatrix(float *matrix, size_t rowCount, size_t colCount) {
     }
     printf("\n");
   }
+}
+
+double myCPUTimer() {
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    return ((double)tp.tv_sec + (double)tp.tv_usec/1.0e6);
 }
