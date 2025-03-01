@@ -58,11 +58,12 @@ int main(int argc, char *argv[]) {
   float *C = (float *) calloc(m * n, sizeof(float));
 
   basicSgemm_h(m, k, n, A, B, C);
-  printf("\n1 Thread 1 Element\n");
+  printf("\n\n1 Thread 1 Element\n");
   basicSgemm_d_1thread1element(m, k, n, A, B, C);
-  printf("\n1 Thread 1 Row:\n");
+  printf("\n\n1 Thread 1 Row\n");
   basicSgemm_d_1thread1row(m, k, n, A, B, C);
-  printf("\n");
+  printf("\n\n1 Thread 1 Column\n");
+  basicSgemm_d_1thread1column(m, k, n, A, B, C);
 
   free(A);
   free(B);
@@ -241,6 +242,72 @@ void basicSgemm_d_1thread1row(int m, int k, int n, const float *A_h, const float
   CHECK(cudaDeviceSynchronize());
   double kernelEndTime = myCPUTimer();
   printf("    matrixMulKernel_1thread1row<<<(%d, %d, %d), (%d, %d, %d)>>>:    %f s\n",
+    gridSize.x, gridSize.y, gridSize.z, blockSize.x, blockSize.y, blockSize.z, kernelEndTime - kernelStartTime);
+
+  memcpyStartTime = myCPUTimer();
+  CHECK(cudaMemcpy((void *) C_h, (void *) C_d, m * n * sizeof(float), cudaMemcpyDeviceToHost));
+  CHECK(cudaDeviceSynchronize());
+  memcpyEndTime = myCPUTimer();
+  printf("%-68s%f s\n", "    cudaMemcpy:", memcpyEndTime - memcpyStartTime);
+
+  CHECK(cudaFree(A_d));
+  CHECK(cudaFree(B_d));
+  CHECK(cudaFree(C_d));
+
+  CHECK(cudaDeviceSynchronize());
+  double endTime = myCPUTimer();
+
+  printf("%-68s%f s\n\n", "matrixMultiply on GPU", endTime - startTime);
+
+  printf("Verifying results...");
+  float *cpuRes = (float *) calloc(m * n, sizeof(float));
+  matrixMulHost(m, k, n, A_h, B_h, cpuRes);
+  printf("%s\n", verify(cpuRes, C_h, m, n) ? "TEST PASSED" : "TEST FAILED");
+  free(cpuRes);
+}
+
+__global__ void matrixMulKernel_1thread1column(int m, int k, int n, const float *A_d, const float *B_d, float* C_d) {
+  unsigned int colIdx = blockDim.x * blockIdx.x + threadIdx.x;
+
+  if (colIdx < n) {
+    for (unsigned int rowIdx = 0; rowIdx < m; rowIdx++) {
+      float sum = 0;
+      for (unsigned int i = 0; i < k; i++) {
+        sum += A_d[rowIdx * k + i] * B_d[i * n + colIdx];
+      }
+      C_d[rowIdx * n + colIdx] = sum;
+    }
+  }
+}
+
+void basicSgemm_d_1thread1column(int m, int k, int n, const float *A_h, const float *B_h, float* C_h) {
+  CHECK(cudaDeviceSynchronize());
+
+  double startTime = myCPUTimer();
+
+  float *A_d, *B_d, *C_d;
+
+  double mallocStartTime = myCPUTimer();
+  CHECK(cudaMalloc((void **) &A_d, m * k * sizeof(float)));
+  CHECK(cudaMalloc((void **) &B_d, k * n * sizeof(float)));
+  CHECK(cudaMalloc((void **) &C_d, m * n * sizeof(float)));
+  CHECK(cudaDeviceSynchronize());
+  double mallocEndTime = myCPUTimer();
+  printf("%-68s%f s\n", "    cudaMalloc:", mallocEndTime - mallocStartTime);
+
+  double memcpyStartTime = myCPUTimer();
+  CHECK(cudaMemcpy((void *) A_d, (void *) A_h, m * k * sizeof(float), cudaMemcpyHostToDevice));
+  CHECK(cudaMemcpy((void *) B_d, (void *) B_h, k * n * sizeof(float), cudaMemcpyHostToDevice));
+  CHECK(cudaDeviceSynchronize());
+  double memcpyEndTime = myCPUTimer();
+  printf("%-68s%f s\n", "    cudaMemcpy:", memcpyEndTime - memcpyStartTime);
+
+  dim3 gridSize(ceil((float) n / 32), 1, 1), blockSize(32, 1, 1);
+  double kernelStartTime = myCPUTimer();
+  matrixMulKernel_1thread1column<<<gridSize, blockSize>>>(m, k, n, A_d, B_d, C_d);
+  CHECK(cudaDeviceSynchronize());
+  double kernelEndTime = myCPUTimer();
+  printf("    matrixMulKernel_1thread1column<<<(%d, %d, %d), (%d, %d, %d)>>>:    %f s\n",
     gridSize.x, gridSize.y, gridSize.z, blockSize.x, blockSize.y, blockSize.z, kernelEndTime - kernelStartTime);
 
   memcpyStartTime = myCPUTimer();
