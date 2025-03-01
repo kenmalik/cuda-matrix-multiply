@@ -120,17 +120,17 @@ void basicSgemm_h(int m, int k, int n, const float *A_h, const float *B_h, float
   double startTime = myCPUTimer();
   matrixMulHost(m, k, n, A_h, B_h, C_h);
   double endTime = myCPUTimer();
-  printf("matrixMul on CPU: %f s\n", endTime - startTime);
+  printf("matrixMultiply on CPU: %f s\n", endTime - startTime);
 }
 
 void matrixMulHost(int m, int k, int n, const float *A_h, const float *B_h, float* C_h) {
-  for (unsigned int i = 0; i < m; i++) {
-    for (unsigned int j = 0; j < n; j++) {
+  for (unsigned int rowIdx = 0; rowIdx < m; rowIdx++) {
+    for (unsigned int colIdx = 0; colIdx < n; colIdx++) {
       float sum = 0;
-      for (unsigned int element_idx = 0; element_idx < k; element_idx++) {
-        sum += A_h[i * k + element_idx] * B_h[n * element_idx + j];
+      for (unsigned int i = 0; i < k; i++) {
+        sum += A_h[rowIdx * k + i] * B_h[n * i + colIdx];
       }
-      C_h[i * n + j] = sum;
+      C_h[rowIdx * n + colIdx] = sum;
     }
   }
 }
